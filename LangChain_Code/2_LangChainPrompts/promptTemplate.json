@@ -1,0 +1,17 @@
+{
+    "name": null,
+    "input_variables": [
+        "length",
+        "paper",
+        "style"
+    ],
+    "optional_variables": [],
+    "output_parser": null,
+    "partial_variables": {},
+    "metadata": null,
+    "tags": null,
+    "template": "Explain the research paper \"{paper}\" in a {style} style and make it {length}",
+    "template_format": "f-string",
+    "validate_template": true,
+    "_type": "prompt"
+}

@@ -1,0 +1,134 @@
+# ---------------------------------------------------
+# Import Required Libraries
+# ---------------------------------------------------
+
+# ChatOpenAI -> Used to connect LangChain with OpenAI-compatible LLM APIs
+from langchain_openai import ChatOpenAI
+
+# load_dotenv -> Loads environment variables from .env file
+from dotenv import load_dotenv
+
+# Streamlit (optional here, useful later for UI apps)
+import streamlit as st
+
+import os
+
+# Typing utilities used inside schema
+from typing import TypedDict, Annotated, Optional, Literal
+
+# Pydantic -> Used for defining structured schema + validation
+from pydantic import BaseModel, Field
+
+
+# ---------------------------------------------------
+# STEP 1: Load API Keys from .env file
+# ---------------------------------------------------
+load_dotenv()
+
+
+# ---------------------------------------------------
+# STEP 2: Initialize the LLM
+# ---------------------------------------------------
+# We are using an OpenAI-compatible model endpoint.
+# API key and base URL are fetched securely from environment variables.
+
+model = ChatOpenAI(
+    model='mistralai/Mistral-Small-3.1-24B-Instruct-2503',
+    api_key=os.getenv("LLM_API_KEY"),
+    base_url=os.getenv("LLM_BASE_URL")
+)
+
+
+# ---------------------------------------------------
+# STEP 3: Define Structured Output Schema using Pydantic
+# ---------------------------------------------------
+# Pydantic model defines:
+# ✔ structure of output
+# ✔ data types
+# ✔ validation rules
+# ✔ descriptions (used internally by LLM as instructions)
+
+class Review(BaseModel):
+
+    # List of important topics discussed in review
+    key_themes: list[str] = Field(
+        description="Write down all the key themes discussed in the review in a list"
+    )
+
+    # Short summary of the review
+    summary: str = Field(
+        description="A brief summary of the review"
+    )
+
+    # Sentiment restricted to only two values
+    # Literal ensures LLM returns only allowed options
+    sentiment: Literal["pos", "neg"] = Field(
+        description="Return sentiment of the review either negative or positive"
+    )
+
+    # Optional list of advantages
+    pros: Optional[list[str]] = Field(
+        default=None,
+        description="Write down all the pros inside a list"
+    )
+
+    # Optional list of disadvantages
+    cons: Optional[list[str]] = Field(
+        default=None,
+        description="Write down all the cons inside a list"
+    )
+
+    # Optional reviewer name
+    name: Optional[str] = Field(
+        default=None,
+        description="Write the name of the reviewer"
+    )
+
+
+# ---------------------------------------------------
+# STEP 4: Enable Structured Output
+# ---------------------------------------------------
+# LangChain automatically:
+# - Creates system instructions
+# - Forces model to follow schema
+# - Validates output using Pydantic
+
+structured_model = model.with_structured_output(Review)
+
+
+# ---------------------------------------------------
+# STEP 5: Provide Unstructured Text Input
+# ---------------------------------------------------
+# The model will extract structured information
+# from this natural language review.
+
+result = structured_model.invoke("""
+I recently upgraded to the Samsung Galaxy S24 Ultra, and I must say, it’s an absolute powerhouse! 
+The Snapdragon 8 Gen 3 processor makes everything lightning fast—whether I’m gaming, multitasking, or editing photos. 
+The 5000mAh battery easily lasts a full day even with heavy use, and the 45W fast charging is a lifesaver.
+
+The S-Pen integration is a great touch for note-taking and quick sketches, though I don't use it often. 
+What really blew me away is the 200MP camera—the night mode is stunning, capturing crisp, vibrant images even in low light. 
+Zooming up to 100x actually works well for distant objects, but anything beyond 30x loses quality.
+
+However, the weight and size make it a bit uncomfortable for one-handed use. 
+Also, Samsung’s One UI still comes with bloatware. 
+The $1,300 price tag is also a hard pill to swallow.
+
+Pros:
+Insanely powerful processor
+Stunning 200MP camera
+Long battery life with fast charging
+S-Pen support is unique and useful
+
+Review by Nitish Singh
+""")
+
+
+# ---------------------------------------------------
+# STEP 6: Print Result
+# ---------------------------------------------------
+# Output is NOT a dictionary.
+# It is a Pydantic object → accessed using dot notation.
+
+print(result)
